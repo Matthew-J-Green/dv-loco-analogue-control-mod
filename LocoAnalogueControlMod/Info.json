@@ -1,0 +1,7 @@
+{
+  "Id": "LocoAnalogueControlMod",
+  "DisplayName": "Loco Analogue Control",
+  "Author": "greeny",
+  "Version": "0.0.1",
+  "EntryMethod": "LocoAnalogueControlMod.Main.Load"
+}
