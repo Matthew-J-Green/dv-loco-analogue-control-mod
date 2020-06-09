@@ -1,6 +1,8 @@
 # dv-loco-analogue-control-mod
 Derail Valley mod for analogue control in locomotives
 
+99% Sure this wont work with VR
+
 ## Using the Mod
 
  - Install Unity Mod Manager
