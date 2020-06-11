@@ -128,7 +128,6 @@ namespace LocoAnalogueControlMod
                     {
                         // All the steam loco stuff really doesnt like being set
                         // Visuals dont update but the logic is correct ;(
-
                         LocoControllerSteam locoControllerSteam = locoController as LocoControllerSteam;
 
                         // Whistle resets every sim tick so just override it
@@ -141,8 +140,6 @@ namespace LocoAnalogueControlMod
                         SanderValveInput.SetItem(config.SanderValve, locoControllerSteam.SetSanderValve);
                         SteamReleaseInput.SetItem(config.SteamRelease, locoControllerSteam.SetSteamReleaser);
                         WaterDumpInput.SetItem(config.WaterDump, locoControllerSteam.SetWaterDump);
-
-
                     }
                 }
             }
@@ -151,34 +148,76 @@ namespace LocoAnalogueControlMod
         // Need to know when we have grabbed a Locomotive Remote
         // Actual Grab Handlers
         static void OnItemGrabbedRight(InventoryItemSpec iis) { HoldingLocoRoCo = iis?.GetComponent<LocomotiveRemoteController>(); }
-        static void OnItemUngrabbedRight(InventoryItemSpec iis) { HoldingLocoRoCo = null; }
+        static void OnItemUngrabbedRight() { HoldingLocoRoCo = null; }
         // Grab Listeners
-        static void OnItemAddedToInventory(GameObject o, int _) { OnItemUngrabbedRight(o.GetComponent<InventoryItemSpec>()); }
+        static void OnItemAddedToInventory(GameObject o, int _) { OnItemUngrabbedRight(); }
         static void OnItemGrabbedRightNonVR(GameObject o) { OnItemGrabbedRight(o.GetComponent<InventoryItemSpec>()); }
-        static void OnItemUngrabbedRightNonVR(GameObject o) { OnItemUngrabbedRight(o.GetComponent<InventoryItemSpec>()); }
+        static void OnItemUngrabbedRightNonVR(GameObject o) { OnItemUngrabbedRight(); }
     }
 
     public class Input
     {
         private float currentInput, previousInput = 0.0f;
+        private bool inDeadZone, inDeadZonePrev, inDeadZoneChanged = false;
 
-        public void SetItem(Config.Axis inputAxis, Action<float> setLocoAxis, float minDelta = 0.01f)
+        public void SetItem(Config.Axis inputAxis, Action<float> setLocoAxis, float minDelta = 0.005f)
         {
             if (inputAxis != null && !inputAxis.AxisName.Equals(""))
             {
                 // Update the current values as regaining focus also sets axis to 50%
-                if (!Main.hasFocusPrev && Main.hasFocus) currentInput = inputAxis.GetValue();
+                if (!Main.hasFocusPrev && Main.hasFocus) currentInput = GetValue(inputAxis);
 
-                previousInput = currentInput;
-                currentInput = inputAxis.GetValue();
+                currentInput = GetValue(inputAxis);
 
-                // Deadzones dont work properly if we only update when we have changed a small amount
-                //if (Math.Abs(previousInput - currentInput) > minDelta)
-                //{
+                // Only update item if we have changed by an amount or we enter/exit deadzones
+                // This allows other input methods to still be used
+                // minDelta should probably be configurable in case user inputs are more jittery when left in a fixed position
+                if ((Math.Abs(previousInput - currentInput) > minDelta) || inDeadZoneChanged)
+                {
                     setLocoAxis(currentInput);
                     if (inputAxis.Debug) Main.mod.Logger.Log(string.Format("Axis: {0}, Value: {1}", inputAxis.AxisName, currentInput));
-                //}
+                    previousInput = currentInput;
+                }
             }
+        }
+
+        // Might be better to use direct input for better control over attached devices
+        private float GetValue(Config.Axis axis)
+        {
+            // Should use a mapping from the AxisName to an axis number cause this axis entered might not exist
+            float value = UnityEngine.Input.GetAxisRaw(axis.AxisName);
+
+            InDeadZone(axis, value);
+            // Deadzone scaling
+            DeadZoneScaling(axis, ref value);
+
+            if (axis.Inversed) value = -value;
+            if (axis.FullRange) value = (value + 1f) / 2f;
+
+            return value;
+        }
+
+        private void DeadZoneScaling(Config.Axis axis, ref float value)
+        {
+            // Deadzone scaling
+            if (Math.Abs(value) <= axis.DeadZoneCentral)
+            {
+                value = 0f;
+            }
+            else
+            {
+                float range = 1f - axis.DeadZoneCentral - axis.DeadZoneEnds;
+                if (range == 0) value = 0;
+                if (value > 0) value = Math.Min(1f, (value - axis.DeadZoneCentral) / range);
+                else value = Math.Max(-1f, (value + axis.DeadZoneCentral) / range);
+            }
+        }
+
+        private void InDeadZone(Config.Axis axis, float value)
+        {
+            inDeadZonePrev = inDeadZone;
+            inDeadZone = Math.Abs(value) >= (1f - axis.DeadZoneEnds) || Math.Abs(value) <= axis.DeadZoneCentral;
+            inDeadZoneChanged = inDeadZone != inDeadZonePrev;
         }
     }
 
@@ -206,29 +245,6 @@ namespace LocoAnalogueControlMod
             public bool Debug { get; set; } = false;
             public float DeadZoneCentral { get; set; } = 0f;
             public float DeadZoneEnds { get; set; } = 0f;
-            public float GetValue()
-            {
-                // Should use a mapping from the AxisName to an axis number cause this axis entered might not exist
-                float value = UnityEngine.Input.GetAxisRaw(AxisName);
-
-                // Deadzone scaling
-                if (Math.Abs(value) <= DeadZoneCentral)
-                {
-                    value = 0f;
-                }
-                else
-                {
-                    float range = 1f - DeadZoneCentral - DeadZoneEnds;
-                    if (range == 0) return 0;
-                    if (value > 0) value = Math.Min(1f, (value - DeadZoneCentral) / range);
-                    else value = Math.Max(-1f, (value + DeadZoneCentral) / range);
-                }
-
-                if (Inversed) value = -value;
-                if (FullRange) value = (value + 1f) / 2f;
-
-                return value;
-            }
         }
     }
 }
