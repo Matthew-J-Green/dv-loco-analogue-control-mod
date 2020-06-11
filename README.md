@@ -19,6 +19,8 @@ For button mappings please use your joystick/controller utility or 3rd party sof
 	 - `Invert` inverts the axis. Some axis are already inverted in game
 	 - `FullRange` takes a -1 to 1 range and maps it to 0 to 1
 	 - `Debug` enables printing the value being applied to the mod manager log. Enable this for first time setup.
+	 - `DeadZoneCentral` is the percentage of the axis where an input value will produce a 0 value expressed as a float. 0.1 = 10%
+	 - `DeadZoneEnds` is the percentage of the axis where an input value will produce a  -1/1 value expressed as a float. 0.1 = 10% 
  - Disable and re-enable the mod from the mod manager log window open (`ctrl + F10`) to reload the config and hop into a locomotive
  - With the mod manager log window open move your controller axis and observe the output in the log window
 	 - The reverser axis should be from -1 to 1. All other axis are from 0 to 1
