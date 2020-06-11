@@ -4,7 +4,6 @@ using UnityModManagerNet;
 using Harmony12;
 using UnityEngine;
 using Newtonsoft.Json;
-using System.Runtime.CompilerServices;
 
 namespace LocoAnalogueControlMod
 {
@@ -15,12 +14,24 @@ namespace LocoAnalogueControlMod
         public static UnityModManager.ModEntry mod;
         public static Config config = new Config();
 
-        private static LocomotiveRemoteController LocoRoCo;
+        public static bool hasFocus, hasFocusPrev = false;
+
+        private static LocomotiveRemoteController HoldingLocoRoCo;
         private static string configPath = null;
         private static bool listenersSetup = false;
-        private static bool hasFocus, hasFocusPrev = false;
-        private static float throttleVal, reverserVal, trainBrakeVal, independentBrakeVal = 0.0f;
-        private static float throttleValPrev, reverserValPrev, trainBrakeValPrev, independentBrakeValPrev = 0.0f;
+
+        private static Input throttleInput = new Input();
+        private static Input reverserInput = new Input();
+        private static Input trainBrakeInput = new Input();
+        private static Input independentBrakeInput = new Input();
+        private static Input fireDoorInput = new Input();
+        private static Input InjectorInput = new Input();
+        private static Input DraftInput = new Input();
+        private static Input BlowerInput = new Input();
+        private static Input SanderValveInput = new Input();
+        private static Input SteamReleaseInput = new Input();
+        private static Input WaterDumpInput = new Input();
+        private static Input WhistleInput = new Input();
 
         static bool Load(UnityModManager.ModEntry modEntry)
         {
@@ -32,8 +43,6 @@ namespace LocoAnalogueControlMod
 
             mod.OnUpdate = OnUpdate;
             mod.OnToggle = OnToggle;
-
-            LoadConfig();
 
             return true;
         }
@@ -87,28 +96,19 @@ namespace LocoAnalogueControlMod
 
             if (hasFocus)
             {
-                // Update the current values as regaining focus also sets axis to 50%
-                // We might be able to use the Application.focusChanged event instead
-                if (!hasFocusPrev && hasFocus)
-                {
-                    throttleVal = config.Throttle.GetValue();
-                    reverserVal = config.Reverser.GetValue();
-                    trainBrakeVal = config.TrainBrake.GetValue();
-                    independentBrakeVal = config.IndependentBrake.GetValue();
-                }
-
                 // Get remote or local loco
                 LocoControllerBase locoController = null;
-                if (LocoRoCo != null)
+                if (HoldingLocoRoCo != null)
                 {
                     // Go get some private fields from the currently held locomotive remote
-                    bool isPoweredOn = (bool)typeof(LocomotiveRemoteController).GetField("isPoweredOn", BindingFlags.NonPublic | BindingFlags.Instance).GetValue(LocoRoCo); ;
-                    float lostSignalSecondsLeft = (float)typeof(LocomotiveRemoteController).GetField("lostSignalSecondsLeft", BindingFlags.NonPublic | BindingFlags.Instance).GetValue(LocoRoCo);
+                    bool isPoweredOn = (bool)typeof(LocomotiveRemoteController).GetField("isPoweredOn", BindingFlags.NonPublic | BindingFlags.Instance).GetValue(HoldingLocoRoCo); ;
+                    float lostSignalSecondsLeft = (float)typeof(LocomotiveRemoteController).GetField("lostSignalSecondsLeft", BindingFlags.NonPublic | BindingFlags.Instance).GetValue(HoldingLocoRoCo);
 
-                    // Implement the logic for understanding if the pairedLocomotive is valid. This is normally done in the LocomotiveRemoteController.Transmit method but is easier to do it here so we can re-use the analogue input logic.
+                    // Implement the logic for understanding if the pairedLocomotive is valid.
+                    // This is normally done in the LocomotiveRemoteController.Transmit method but is easier to do it here so we can re-use the analogue input logic.
                     if (isPoweredOn && lostSignalSecondsLeft == 0f)
                     {
-                        locoController = (LocoControllerBase)typeof(LocomotiveRemoteController).GetField("pairedLocomotive", BindingFlags.NonPublic | BindingFlags.Instance).GetValue(LocoRoCo);
+                        locoController = (LocoControllerBase)typeof(LocomotiveRemoteController).GetField("pairedLocomotive", BindingFlags.NonPublic | BindingFlags.Instance).GetValue(HoldingLocoRoCo);
                     }
                 }
                 else
@@ -117,53 +117,32 @@ namespace LocoAnalogueControlMod
                 }
 
                 // Do the actual updating
-                // Clean up this mess of code
-                if (locoController != null || LocoRoCo != null)
+                if (locoController != null)
                 {
-                    // Write a method you pleb
-                    if (config.Throttle != null && !config.Throttle.AxisName.Equals(""))
-                    {
-                        // Only update when input has changed to prevent locking out any other controls to these axis
-                        throttleValPrev = throttleVal;
-                        throttleVal = config.Throttle.GetValue();
-                        if (Math.Abs(throttleValPrev - throttleVal) > 0.001f)
-                        {
-                            locoController?.SetThrottle(throttleVal);
-                            if (config.Throttle.Debug) Main.mod.Logger.Log(string.Format("Axis: {0}, Value: {1}", config.Throttle.AxisName, throttleVal));
-                        }
-                    }
+                    throttleInput.SetItem(config.Throttle, locoController.SetThrottle);
+                    reverserInput.SetItem(config.Reverser, locoController.SetReverser);
+                    trainBrakeInput.SetItem(config.TrainBrake, locoController.SetBrake);
+                    independentBrakeInput.SetItem(config.IndependentBrake, locoController.SetIndependentBrake);
 
-                    if (config.Reverser != null && !config.Reverser.AxisName.Equals(""))
+                    if (locoController.GetType().Name.Equals("LocoControllerSteam"))
                     {
-                        reverserValPrev = reverserVal;
-                        reverserVal = config.Reverser.GetValue();
-                        if (Math.Abs(reverserValPrev - reverserVal) > 0.001f)
-                        {
-                            locoController?.SetReverser(reverserVal);
-                            if (config.Reverser.Debug) Main.mod.Logger.Log(string.Format("Axis: {0}, Value: {1}", config.Reverser.AxisName, reverserVal));
-                        }
-                    }
+                        // All the steam loco stuff really doesnt like being set
+                        // Visuals dont update but the logic is correct ;(
 
-                    if (config.TrainBrake != null && !config.TrainBrake.AxisName.Equals(""))
-                    {
-                        trainBrakeValPrev = trainBrakeVal;
-                        trainBrakeVal = config.TrainBrake.GetValue();
-                        if (Math.Abs(trainBrakeValPrev - trainBrakeVal) > 0.001f)
-                        {
-                            locoController?.SetBrake(trainBrakeVal);
-                            if (config.TrainBrake.Debug) Main.mod.Logger.Log(string.Format("Axis: {0}, Value: {1}", config.TrainBrake.AxisName, trainBrakeVal));
-                        }
-                    }
+                        LocoControllerSteam locoControllerSteam = locoController as LocoControllerSteam;
 
-                    if (config.IndependentBrake != null && !config.IndependentBrake.AxisName.Equals(""))
-                    {
-                        independentBrakeValPrev = independentBrakeVal;
-                        independentBrakeVal = config.IndependentBrake.GetValue();
-                        if (Math.Abs(independentBrakeValPrev - independentBrakeVal) > 0.001f)
-                        {
-                            locoController?.SetIndependentBrake(independentBrakeVal);
-                            if (config.IndependentBrake.Debug) Main.mod.Logger.Log(string.Format("Axis: {0}, Value: {1}", config.IndependentBrake.AxisName, independentBrakeVal));
-                        }
+                        // Whistle resets every sim tick so just override it
+                        WhistleInput.SetItem(config.Whistle, locoControllerSteam.SetWhistle, 0f);
+
+                        fireDoorInput.SetItem(config.FireDoor, locoControllerSteam.SetFireDoorOpen);
+                        InjectorInput.SetItem(config.Injector, locoControllerSteam.SetInjector);
+                        DraftInput.SetItem(config.Draft, locoControllerSteam.SetDraft);
+                        BlowerInput.SetItem(config.Blower, locoControllerSteam.SetBlower);
+                        SanderValveInput.SetItem(config.SanderValve, locoControllerSteam.SetSanderValve);
+                        SteamReleaseInput.SetItem(config.SteamRelease, locoControllerSteam.SetSteamReleaser);
+                        WaterDumpInput.SetItem(config.WaterDump, locoControllerSteam.SetWaterDump);
+
+
                     }
                 }
             }
@@ -171,12 +150,36 @@ namespace LocoAnalogueControlMod
 
         // Need to know when we have grabbed a Locomotive Remote
         // Actual Grab Handlers
-        static void OnItemGrabbedRight(InventoryItemSpec iis) { LocoRoCo = iis?.GetComponent<LocomotiveRemoteController>(); }
-        static void OnItemUngrabbedRight(InventoryItemSpec iis) { LocoRoCo = null; }
+        static void OnItemGrabbedRight(InventoryItemSpec iis) { HoldingLocoRoCo = iis?.GetComponent<LocomotiveRemoteController>(); }
+        static void OnItemUngrabbedRight(InventoryItemSpec iis) { HoldingLocoRoCo = null; }
         // Grab Listeners
         static void OnItemAddedToInventory(GameObject o, int _) { OnItemUngrabbedRight(o.GetComponent<InventoryItemSpec>()); }
         static void OnItemGrabbedRightNonVR(GameObject o) { OnItemGrabbedRight(o.GetComponent<InventoryItemSpec>()); }
         static void OnItemUngrabbedRightNonVR(GameObject o) { OnItemUngrabbedRight(o.GetComponent<InventoryItemSpec>()); }
+    }
+
+    public class Input
+    {
+        private float currentInput, previousInput = 0.0f;
+
+        public void SetItem(Config.Axis inputAxis, Action<float> setLocoAxis, float minDelta = 0.01f)
+        {
+            if (inputAxis != null && !inputAxis.AxisName.Equals(""))
+            {
+                // Update the current values as regaining focus also sets axis to 50%
+                if (!Main.hasFocusPrev && Main.hasFocus) currentInput = inputAxis.GetValue();
+
+                previousInput = currentInput;
+                currentInput = inputAxis.GetValue();
+
+                // Deadzones dont work properly if we only update when we have changed a small amount
+                //if (Math.Abs(previousInput - currentInput) > minDelta)
+                //{
+                    setLocoAxis(currentInput);
+                    if (inputAxis.Debug) Main.mod.Logger.Log(string.Format("Axis: {0}, Value: {1}", inputAxis.AxisName, currentInput));
+                //}
+            }
+        }
     }
 
     // Probably a better way to write this
@@ -186,6 +189,14 @@ namespace LocoAnalogueControlMod
         public Axis Reverser { get; set; } = new Axis();
         public Axis TrainBrake { get; set; } = new Axis();
         public Axis IndependentBrake { get; set; } = new Axis();
+        public Axis FireDoor { get; set; } = new Axis();
+        public Axis Injector { get; set; } = new Axis();
+        public Axis Draft { get; set; } = new Axis();
+        public Axis Blower { get; set; } = new Axis();
+        public Axis SanderValve { get; set; } = new Axis();
+        public Axis SteamRelease { get; set; } = new Axis();
+        public Axis WaterDump { get; set; } = new Axis();
+        public Axis Whistle { get; set; } = new Axis();
 
         public class Axis
         {
@@ -193,11 +204,26 @@ namespace LocoAnalogueControlMod
             public bool Inversed { get; set; } = false;
             public bool FullRange { get; set; } = false;
             public bool Debug { get; set; } = false;
-
+            public float DeadZoneCentral { get; set; } = 0f;
+            public float DeadZoneEnds { get; set; } = 0f;
             public float GetValue()
             {
                 // Should use a mapping from the AxisName to an axis number cause this axis entered might not exist
                 float value = UnityEngine.Input.GetAxisRaw(AxisName);
+
+                // Deadzone scaling
+                if (Math.Abs(value) <= DeadZoneCentral)
+                {
+                    value = 0f;
+                }
+                else
+                {
+                    float range = 1f - DeadZoneCentral - DeadZoneEnds;
+                    if (range == 0) return 0;
+                    if (value > 0) value = Math.Min(1f, (value - DeadZoneCentral) / range);
+                    else value = Math.Max(-1f, (value + DeadZoneCentral) / range);
+                }
+
                 if (Inversed) value = -value;
                 if (FullRange) value = (value + 1f) / 2f;
 
