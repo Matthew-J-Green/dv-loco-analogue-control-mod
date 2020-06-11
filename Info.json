@@ -2,7 +2,8 @@
   "Id": "LocoAnalogueControlMod",
   "DisplayName": "Locomotive Analogue Control",
   "Author": "Greeny",
-  "Version": "1.0.0",
+  "Version": "1.1.0",
   "EntryMethod": "LocoAnalogueControlMod.Main.Load",
+  "HomePage": "https://www.nexusmods.com/derailvalley/mods/136",
   "Repository": "https://raw.githubusercontent.com/Matthew-J-Green/dv-loco-analogue-control-mod/master/Repository.json"
 }
