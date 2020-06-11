@@ -165,7 +165,11 @@ namespace LocoAnalogueControlMod
             if (inputAxis != null && !inputAxis.AxisName.Equals(""))
             {
                 // Update the current values as regaining focus also sets axis to 50%
-                if (!Main.hasFocusPrev && Main.hasFocus) currentInput = GetValue(inputAxis);
+                if (!Main.hasFocusPrev && Main.hasFocus)
+                {
+                    previousInput = GetValue(inputAxis);
+                    inDeadZoneChanged = false;
+                }
 
                 currentInput = GetValue(inputAxis);
 
