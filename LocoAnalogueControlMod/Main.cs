@@ -189,13 +189,11 @@ namespace LocoAnalogueControlMod
         private float GetValue(Config.Axis axis)
         {
             // Should use a mapping from the AxisName to an axis number cause this axis entered might not exist
-            float value = UnityEngine.Input.GetAxisRaw(axis.AxisName);
+            float value = UnityEngine.Input.GetAxisRaw(axis.AxisName) * axis.Scaling;
 
             InDeadZone(axis, value);
-            // Deadzone scaling
             DeadZoneScaling(axis, ref value);
 
-            if (axis.Inversed) value = -value;
             if (axis.FullRange) value = (value + 1f) / 2f;
 
             return value;
@@ -244,11 +242,11 @@ namespace LocoAnalogueControlMod
         public class Axis
         {
             public string AxisName { get; set; } = "";
-            public bool Inversed { get; set; } = false;
             public bool FullRange { get; set; } = false;
-            public bool Debug { get; set; } = false;
+            public float Scaling { get; set; } = 1f;
             public float DeadZoneCentral { get; set; } = 0f;
             public float DeadZoneEnds { get; set; } = 0f;
+            public bool Debug { get; set; } = false;
         }
     }
 }
