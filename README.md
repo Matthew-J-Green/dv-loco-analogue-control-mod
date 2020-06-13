@@ -16,7 +16,7 @@ For button mappings please use your joystick/controller utility or 3rd party sof
  - Run Derail Valley to generate `config.json` in the mod folder
  - Update `config.json` for each input.
 	 - `AxisName` is the in game joystick axis name which is assigned an axis number. [See Understanding Joystick Mapping](#understanding-joystick-mapping). Leave any unused inputs as a blank string
-	 - `Invert` inverts the axis. Some axis are already inverted in game
+	 - `Scaling` Allows you to apply a scaling to an axis in case it doesnt saturate the full range. Applying a negative scaling will invert the axis
 	 - `FullRange` takes a -1 to 1 range and maps it to 0 to 1
 	 - `Debug` enables printing the value being applied to the mod manager log. Enable this for first time setup.
 	 - `DeadZoneCentral` is the percentage of the axis where an input value will produce a 0 value expressed as a float. 0.1 = 10%
