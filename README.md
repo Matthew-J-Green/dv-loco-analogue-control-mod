@@ -1,6 +1,8 @@
 # dv-loco-analogue-control-mod
 Derail Valley mod for analogue control in locomotives
 
+# REGENERATE THE CONFIG.JSON AFTER EVERY UPDATE TO PREVENT VERSION MIGRATION ISSUES
+
 There is only one joystick configured in the game. Multiple attached controllers will fight each other. 99% Sure this wont work with VR.
 
 This mod puts the value on your controller axis into the in game axis.
