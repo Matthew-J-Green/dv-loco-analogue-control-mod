@@ -79,7 +79,7 @@ namespace LocoAnalogueControlMod
             if (!listenersSetup)
             {
                 // Gotta wait until we are loaded until registering the listeners
-                if (LoadingScreenManager.IsLoading || !WorldStreamingInit.IsLoaded || !InventoryStartingItems.itemsLoaded) return;
+                //if (LoadingScreenManager.IsLoading || !WorldStreamingInit.IsLoaded || !StartingItemsController.itemsLoaded) return;
 
                 Grabber grab = PlayerManager.PlayerTransform.GetComponentInChildren<Grabber>();
                 grab.Grabbed += OnItemGrabbedRightNonVR;
@@ -137,7 +137,7 @@ namespace LocoAnalogueControlMod
                         InjectorInput.SetItem(config.Injector, locoControllerSteam.SetInjector);
                         DraftInput.SetItem(config.Draft, locoControllerSteam.SetDraft);
                         BlowerInput.SetItem(config.Blower, locoControllerSteam.SetBlower);
-                        SanderValveInput.SetItem(config.SanderValve, locoControllerSteam.SetSanderValve);
+                        SanderValveInput.SetItem(config.SanderValve, locoControllerSteam.SetSanders);
                         SteamReleaseInput.SetItem(config.SteamRelease, locoControllerSteam.SetSteamReleaser);
                         WaterDumpInput.SetItem(config.WaterDump, locoControllerSteam.SetWaterDump);
                     }

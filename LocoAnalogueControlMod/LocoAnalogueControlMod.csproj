@@ -9,10 +9,10 @@
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>LocoAnalogueControlMod</RootNamespace>
     <AssemblyName>LocoAnalogueControlMod</AssemblyName>
-    <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.7.2</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <Deterministic>true</Deterministic>
-    <DVInstallPath>D:\SteamLibrary\steamapps\common\Derail Valley\</DVInstallPath>
+    <DVInstallPath>C:\Program Files (x86)\Steam\steamapps\common\Derail Valley\</DVInstallPath>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -97,6 +97,6 @@
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
     <PostBuildEvent>copy $(TargetPath) "$(DVInstallPath)Mods\LocoAnalogueControlMod\"
-copy $(SolutionDir)Info.json "$(DVInstallPath)Mods\LocoAnalogueControlMod\"</PostBuildEvent>
+copy $(ProjectDir)Info.json "$(DVInstallPath)Mods\LocoAnalogueControlMod\"</PostBuildEvent>
   </PropertyGroup>
 </Project>
